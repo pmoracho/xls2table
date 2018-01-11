@@ -23,7 +23,7 @@ __appname__		= "xls2table"
 __appdesc__		= "Importa datos de Excel a una tabla SQL"
 __license__		= 'GPL v3'
 __copyright__	= "(c) 2016, %s" % (__author__)
-__version__ 	= "0.9"
+__version__ 	= "1.0.1"
 __date__		= "2016/01/14"
 
 """
@@ -78,12 +78,6 @@ def init_argparse():
 									add_help=True,
 									formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=40)
 	)
-
-	"""
-	cmdparser.add_argument('-i', '--inputfile'		, type=str, required=True, 	action="store", dest="inputfile"		, help="Archivo Excel de entrada", metavar="<file>")
-	cmdparser.add_argument('-o', '--outputtable'	, type=str, required=True, 	action="store", dest="outputtable"		, help="Tabal SQL donde se insertarán las filas de la planilla", metavar="<tabla>")
-	cmdparser.add_argument('-d', '--dsn'			, type=str, required=True, 	action="store", dest="dsn"				, help="Cadena de conexión", metavar="<dsn>")
-	"""
 
 	cmdparser.add_argument('inputfile'				, type=str,  				action="store"	 						, help="Archivo Excel de entrada")
 	cmdparser.add_argument('outputtable'			, type=str,  				action="store"	 						, help="Tabla SQL donde se insertarán las filas de la planilla")
@@ -162,6 +156,7 @@ class Sheet2SqlStr(object):
 
 		SQLC = SQLC + "CREATE TABLE {0} (\n".format(self.outputtable)
 		SQLC = SQLC + "			ID		INT	IDENTITY,\n"
+
 		SQLI = SQLI + "INSERT INTO {0} ( ".format(self.outputtable)
 
 		if self.hasheader:
@@ -177,7 +172,7 @@ class Sheet2SqlStr(object):
 				SQLI = SQLI + "Campo_{0}, ".format(c+1)
 
 			SQLC = SQLC[:-2] + "\n)\n"
-			SQLI = SQLI[:-2] + " )\n"
+			SQLI = SQLI[:-2] + " ) "
 
 		self._sql_create = SQLC
 		self._sql_inserthdr = SQLI
@@ -201,6 +196,18 @@ class Sheet2SqlStr(object):
 			SQLI = SQLI[:-1] + " )\n"
 			yield SQLI
 
+def chunks(lineas, maxlen):
+
+    batch = ""
+    maxlinea = max([len(l) for l in lineas])
+    for l in lineas:
+        batch = batch + l
+        if len(batch) + maxlinea >= maxlen:
+          yield batch
+          batch = ""
+
+    if batch != "":
+	    yield batch
 
 def procxls(inputfile, outputtable, dsn, sheet_num, hasheader, showonly):
 	# """procxls: Proceso principal de importación del xls"""
@@ -209,17 +216,18 @@ def procxls(inputfile, outputtable, dsn, sheet_num, hasheader, showonly):
 
 	book 	= xlrd.open_workbook(inputfile)
 	sheet	= book.sheet_by_index(sheet_num)
-
 	S2Sql 	= Sheet2SqlStr(book, sheet, outputtable, sheet_num, hasheader)
-	SQL 	= "\nBEGIN TRANSACTION\n\n"
-	SQL 	= SQL + S2Sql.get_create_sql()
-	SQL 	= SQL + "\n"
-	for isql in S2Sql.get_insert_stmts():
-		SQL = SQL + isql
 
-	SQL 	= SQL + "\nCOMMIT TRANSACTION\n"
+	SQL_start 	= "\nBEGIN TRANSACTION\n\n"
+	SQL_start 	= SQL_start + S2Sql.get_create_sql()
+	SQL_start 	= SQL_start + "\n"
 
-	logging.debug(SQL)
+	SQL_rows	= []
+	SQL_rows 	= [isql for isql in S2Sql.get_insert_stmts()]
+
+	SQL_end 	= "\nCOMMIT TRANSACTION\n"
+
+	logging.debug(SQL_start + "".join(SQL_rows) + SQL_end)
 
 	logging.info("Ejecutando inserción en la tabla %s" % outputtable)
 
@@ -228,9 +236,17 @@ def procxls(inputfile, outputtable, dsn, sheet_num, hasheader, showonly):
 			conn 	= pypyodbc.connect(dsn)
 			cur		= conn.cursor()
 
-			cur.execute(SQL)
+			cur.execute(SQL_start)
+
+			# Armamos lotes de nomas de 100 Kb
+			for batch in chunks(SQL_rows, 100000):
+				cur.execute("".join(batch))
+
+			cur.execute(SQL_end)
+
 			cur.commit()
 			conn.close()
+
 		except Exception as e:
 			logging.error("%s error: %s" % (__appname__, str(e)))
 	else:
@@ -240,7 +256,7 @@ def procxls(inputfile, outputtable, dsn, sheet_num, hasheader, showonly):
 		print("-- Output table : {0}".format(outputtable))
 		print("-- Dsn          : {0}".format(dsn))
 		print("--------------------------------------------------------------------------------------------------------")
-		print(SQL)
+		print(SQL_start + "".join(SQL_rows) + SQL_end)
 		print("--------------------------------------------------------------------------------------------------------")
 		print("-- End Script.")
 		print("--------------------------------------------------------------------------------------------------------")
