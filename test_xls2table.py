@@ -8,7 +8,7 @@ class xls2tableTest(unittest.TestCase):
 
 		reference = """
 					--------------------------------------------------------------------------------------------------------
-					-- File         : Rendimiento.Ejemplo.Importar.xls
+					-- File         : test.xlsx
 					-- Output table : prueba
 					-- Dsn          : none
 					--------------------------------------------------------------------------------------------------------
@@ -28,18 +28,10 @@ class xls2tableTest(unittest.TestCase):
 											Campo_3         VARCHAR(255)
 					)
 
-					INSERT INTO prueba ( Campo_1, Campo_2, Campo_3 )
-							VALUES ('AMOF','12-12-2011','1000' )
-					INSERT INTO prueba ( Campo_1, Campo_2, Campo_3 )
-							VALUES ('GG','01-01-2011','550.6' )
-					INSERT INTO prueba ( Campo_1, Campo_2, Campo_3 )
-							VALUES ('FMO','01-01-2011','563' )
-					INSERT INTO prueba ( Campo_1, Campo_2, Campo_3 )
-							VALUES ('ES','01-01-2012','89' )
-					INSERT INTO prueba ( Campo_1, Campo_2, Campo_3 )
-							VALUES ('MSMAR','05-10-2012','154' )
-					INSERT INTO prueba ( Campo_1, Campo_2, Campo_3 )
-							VALUES ('GPLP','05-10-2007','632' )
+					INSERT INTO prueba ( Campo_1, Campo_2, Campo_3 )        VALUES ('Col1','Col2','Col3' )
+					INSERT INTO prueba ( Campo_1, Campo_2, Campo_3 )        VALUES ('AA','1','03-05-2018' )
+					INSERT INTO prueba ( Campo_1, Campo_2, Campo_3 )        VALUES ('BB','3','04-05-2018' )
+					INSERT INTO prueba ( Campo_1, Campo_2, Campo_3 )        VALUES ('CC','5','05-05-2018' )
 
 					COMMIT TRANSACTION
 
@@ -48,7 +40,7 @@ class xls2tableTest(unittest.TestCase):
 					--------------------------------------------------------------------------------------------------------
 					"""
 
-		output 		= subprocess.check_output('python xls2table.py Rendimiento.Ejemplo.Importar.xls prueba "none"  -s').decode("utf-8") 
+		output 		= subprocess.check_output('python xls2table.py test.xlsx prueba "none" -s').decode("utf-8") 
 		output 		= ' '.join(output.split())
 		reference	= ' '.join(reference.split())
 		self.assertEqual(output, reference)
