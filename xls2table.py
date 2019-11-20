@@ -147,13 +147,14 @@ class Sheet2SqlStr(object):
 
 		SQLC = ""
 		SQLI = ""
-
-		SQLC = SQLC + "BEGIN TRY\n"
-		SQLC = SQLC + "	DROP TABLE " + self.outputtable + "\n"
-		SQLC = SQLC + "END TRY\n"
-		SQLC = SQLC + "BEGIN CATCH\n"
-		SQLC = SQLC + "END CATCH\n\n"
-
+		
+		if self.outputtable.startswith('#'):
+			SQLC = SQLC + "BEGIN TRY\n"
+			SQLC = SQLC + "	DROP TABLE " + self.outputtable + "\n"
+			SQLC = SQLC + "END TRY\n"
+			SQLC = SQLC + "BEGIN CATCH\n"
+			SQLC = SQLC + "END CATCH\n\n"
+		
 		SQLC = SQLC + "CREATE TABLE {0} (\n".format(self.outputtable)
 		SQLC = SQLC + "			ID		INT	IDENTITY,\n"
 
@@ -209,11 +210,29 @@ def chunks(lineas, maxlen):
     if batch != "":
 	    yield batch
 
+def rows(lineas, maxlineas):
+
+    batch = ""
+    i = 0
+    for l in lineas:
+        batch = batch + l
+        i = i + 1
+        if i >= maxlineas:
+          yield batch
+          batch = ""
+          i = 0
+
+    if batch != "":
+	    yield batch
+
 def procxls(inputfile, outputtable, dsn, sheet_num, hasheader, showonly):
 	# """procxls: Proceso principal de importación del xls"""
 
 	logging.info("Procesando %s" % inputfile)
 
+	# if not outputtable.startswith('#'):
+	# 	raise ValueError('Solo se permite importar a una tabla temporal')
+		
 	book 	= xlrd.open_workbook(inputfile)
 	sheet	= book.sheet_by_index(sheet_num)
 	S2Sql 	= Sheet2SqlStr(book, sheet, outputtable, sheet_num, hasheader)
@@ -239,7 +258,7 @@ def procxls(inputfile, outputtable, dsn, sheet_num, hasheader, showonly):
 			cur.execute(SQL_start)
 
 			# Armamos lotes de nomas de 100 Kb
-			for batch in chunks(SQL_rows, 100000):
+			for batch in rows(SQL_rows, 100):
 				cur.execute("".join(batch))
 
 			cur.execute(SQL_end)
