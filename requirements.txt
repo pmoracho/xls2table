@@ -1,2 +1,2 @@
 pypyodbc==1.3.5.2
-xlrd==1.2.0python setup.py bdist_wheel
+xlrd==1.2.0
