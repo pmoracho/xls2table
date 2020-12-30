@@ -87,6 +87,7 @@ def init_argparse():
 
     cmdparser.add_argument('-v', '--version'         , action='version', version=__version__                                , help='Mostrar el número de versión y salir')
     cmdparser.add_argument('-l', '--log'            , type=str,                  action="store", dest="log"                , help="Nivel de log", metavar="<level>", default="none")
+    cmdparser.add_argument('-d', '--delim'            , type=str,                  action="store", dest="delim"               , help="En el caso de los csv, el caracter delimitador (por defecto ';')", metavar="<delim>", default=";")
     cmdparser.add_argument('-n', '--sheetnum'        , type=int,                 action="store", dest="sheet_num"        , help="Número de solapa a leer (la primera es 0)", metavar="<numero>", default="0")
     cmdparser.add_argument('-c', '--hasheader'        ,                              action="store_true", dest="hasheader"    , help="La planilla tiene en la primer fila el nombre de los campos?")
     cmdparser.add_argument('-t', '--nativetypes'    ,                              action="store_true", dest="nativetypes"    , help="Intentar respetar el tipo de dato de cada columna, sino los campo por defecto se generan como VARCHAR(255)")
@@ -125,7 +126,7 @@ def rows(lineas, maxlineas):
     if batch != "":
         yield batch
 
-def procxls(inputfile, outputtable, dsn, sheet_num, hasheader, showonly):
+def procxls(inputfile, outputtable, dsn, sheet_num, hasheader, showonly, delim):
     # """procxls: Proceso principal de importación del xls"""
 
     logging.info("Procesando %s" % inputfile)
@@ -133,8 +134,8 @@ def procxls(inputfile, outputtable, dsn, sheet_num, hasheader, showonly):
     # if not outputtable.startswith('#'):
     #     raise ValueError('Solo se permite importar a una tabla temporal')
 
-    if inputfile[-3:].lower() == "csv":
-        S2Sql     = Csv2SqlStr(inputfile, outputtable, hasheader)
+    if inputfile[-3:].lower() in ["csv", "txt"]:
+        S2Sql     = Csv2SqlStr(inputfile, outputtable, hasheader, delim)
     else:
 
         book     = xlrd.open_workbook(inputfile)
@@ -207,7 +208,7 @@ if __name__ == "__main__":
         logging.basicConfig(level=log_level, format='%(asctime)s:%(levelname)s:%(message)s')
 
         logging.info('iniciando proceso')
-        procxls(args.inputfile, args.outputtable, args.dsn, args.sheet_num, args.hasheader, args.showonly)
+        procxls(args.inputfile, args.outputtable, args.dsn, args.sheet_num, args.hasheader, args.showonly, args.delim)
         logging.info('Fin del proceso')
 
     except Exception as e:
