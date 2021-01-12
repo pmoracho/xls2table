@@ -27,5 +27,5 @@ REM --------------------------------------------------------
 @del *.spec /S /F /Q
 
 @echo --------------------------------------------------------
-@echo Carpeta a distribuir dist\pboletin..
+@echo Carpeta a distribuir dist\xls2table..
 @echo --------------------------------------------------------
